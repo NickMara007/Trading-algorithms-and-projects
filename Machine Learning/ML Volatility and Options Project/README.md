@@ -183,7 +183,7 @@ These features help capture market compression, momentum buildup, and regime tra
 ### **Strategy:**
 
 This version of the script still focuses on long straddles, profiting when predicted future return magnitude is large.
-I have created a version of the script that incorporates long and short straddles, which can profit from volatility expansions contractions.
+I have created a version of the script that incorporates long and short straddles, which can profit from volatility expansions and contractions.
 This is still in development and will require slightly more testing and adaptation, however the short straddle logic has been integrated into the strategy and is working correctly.
 
 
