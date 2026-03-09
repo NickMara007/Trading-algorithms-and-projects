@@ -14,7 +14,7 @@ The project is organized into four scripts, each representing a stage in the res
 - 1_Price Direction Prediction Logistic Regression - Long & Short.py
 - 2_Volatility Regime Prediction Logistic Regression - Option Straddles.py
 - 3_Volatility Regime Prediction Decision Trees - Option Straddles.py
-- 4_future_move_prediction_straddle.py
+- 4_Price Expansion Prediction Decision Trees - Option Straddles.py
 
 Each script builds on the previous work by improving the target definition, feature engineering, modelling approach, and trading strategy design.
 
@@ -22,8 +22,8 @@ The main focus should be on the final two scripts, which are more polished and r
 
 ## **1. Market Direction Prediction (Logistic Regression)**
 
-Script:\
-1_direction_prediction_logistic.py
+**Script:** 
+1_Price Direction Prediction Logistic Regression - Long & Short.py
 
 The first stage of the project focuses on predicting short-term market direction using logistic regression.
 
@@ -63,8 +63,8 @@ This stage served primarily as an initial baseline for model evaluation and pipe
 
 ## **2. Volatility Prediction (Logistic Regression)**
 
-Script:\
-2_volatility_prediction_logistic.py
+**Script:** 
+2_Volatility Regime Prediction Logistic Regression - Option Straddles.py
 
 The second stage shifts the focus from direction prediction to volatility prediction, with the intention of implementing option straddle strategies that profit from voaltility.
 
@@ -108,8 +108,8 @@ Straddles profit from large price movements regardless of direction, making them
 
 ## **3. Volatility Prediction with Decision Trees**
 
-Script:
-3_volatility_prediction_decision_tree.py
+**Script:** 
+3_Volatility Regime Prediction Decision Trees - Option Straddles.py
 
 The third stage improves the modelling framework by replacing logistic regression with decision tree based models.
 
@@ -145,8 +145,8 @@ The long straddle strategy is retained, but now uses the improved model predicti
 
 ## **4. Predicting Future Price Move Magnitude (Straddle Alpha)**
 
-Script:
-4_future_move_prediction_straddle.py
+**Script:** 
+4_Price Expansion Prediction Decision Trees - Option Straddles.py
 
 The final stage of the project reframes the problem to focus directly on straddle profitability.
 From the previous stage, I noticed that the target logic was not classifying bull or bear runs as high volatility periods, which meant missed opportunities for large gains. I learned that volatility measures variance in returns, which can technically be low during a bull or bear runs (e.g. if daily returns are +3%, +3.5%, +3.2%).
