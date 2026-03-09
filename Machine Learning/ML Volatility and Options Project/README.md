@@ -241,10 +241,20 @@ Machine learning clearly has huge potential in this realm, but needs to be handl
 
 ## **Results and Graphs:**
 
+**Prediction and Probability Distribution Results**
 <img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/697b4ea3-3e62-4e19-b27a-2cb7dcc30984" />
 
+**Option Trading Strategy Results on Test Set**
 <img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/14186b0d-ac0b-44b7-b5f3-5750b6976dae" />
 
+**ML Model Prediction Performance Comparison**
 <img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/7831dd23-1a67-4b91-ab8d-5e21fd7141f5" />
 
+**Signal and Feature Importance**
 <img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/0911df4f-241d-40fd-988c-1f8259f47c76" />
+
+**Decision tree model results on the validation data set**
+<img width="939" height="173" alt="Image" src="https://github.com/user-attachments/assets/a24b3042-2a14-467c-ad2f-4734560b5af6" />
+
+**Decision tree model results on the test data set**
+<img width="920" height="139" alt="Image" src="https://github.com/user-attachments/assets/8cf79577-0a9a-45ed-bbe0-351afffcc816" />
