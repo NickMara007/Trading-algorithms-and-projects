@@ -1,1 +1,10 @@
+Python libraries:
 
+numpy
+pandas
+scikit-learn
+matplotlib
+scipy
+yfinance
+seaborn
+xgboost
