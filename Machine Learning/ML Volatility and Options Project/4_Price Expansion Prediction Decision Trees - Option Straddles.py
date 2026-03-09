@@ -1,3 +1,27 @@
+4_Price Expansion Prediction Decision Trees - Option Straddles.py
+
+
+# ==== Price Expansion Modelling and Prediction using Machine Learning (Decision Trees) ====
+# ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+
+# Objective: 
+# Predict future absolute return using technical indicators and past 
+# volatility metrics, and evaluate on an option straddle strategy using predictors.  
+
+# Model:
+# Decision tree classifiers - Random Forests, AdaBoost, XGBoost.
+
+# Strategy:
+# Top percentile of predictions = large future price movement, enter long straddle.
+# Exit position at TP, SL, or timeout (avoid theta decay).
+
+# Input features:
+# ADX, ADX slope, ATR, ATR compression, RSI, Bollinger Band Width,
+# Rate of change (ROC 5, ROC 10), 5-day volatility, 20-day volatility, volatility ratio (vol_5/vol_20), 
+# range_20, distance from 50 MA
+
+# Target feature:
+# Future absolute 15-day return.
 
 import numpy as np
 import pandas as pd
@@ -980,3 +1004,4 @@ if trade_to_csv:
     trade_results.to_csv('ML Decision Tree Trade Results.csv', index=True)
 
 plt.show()
+
