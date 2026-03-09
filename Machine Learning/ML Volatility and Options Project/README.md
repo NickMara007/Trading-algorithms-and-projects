@@ -13,7 +13,7 @@ The project is organized into four scripts, each representing a stage in the res
 
 - 1_Price Direction Prediction Logistic Regression - Long & Short.py
 - 2_Volatility Regime Prediction Logistic Regression - Option Straddles.py
-- 3_volatility_prediction_decision_tree.py
+- 3_Volatility Regime Prediction Decision Trees - Option Straddles.py
 - 4_future_move_prediction_straddle.py
 
 Each script builds on the previous work by improving the target definition, feature engineering, modelling approach, and trading strategy design.
