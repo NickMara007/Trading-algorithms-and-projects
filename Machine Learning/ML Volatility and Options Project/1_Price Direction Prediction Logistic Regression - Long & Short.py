@@ -1,8 +1,25 @@
+1_Price Direction Prediction Logistic Regression - Long & Short.py
 
-# ==== Return Direction Probability using ML ====
+# ==== Return Direction Modelling and Prediction using Machine Learning (Logistic Regression) ====
+# ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
-# Input variables: 5-day log return, 14 day RSI, 20 day volatility, distance from 20 day MA
-# Target variable: positive or negative return after N days, y = 1 if positive, y = 0 otherwise (Binary classification)
+# Objective: 
+# Predict whether an asset will likely exhibit a positive or negative return over N days,
+# and evaluate on a long/short strategy.  
+
+# Model:
+# Logistic regression using polynomial feature expansion.
+
+# Strategy:
+# Top percentile of predictions = positive future return, enter long position.
+# Bottom percentile of predictions = negative future return, enter short position.
+# Exit position at TP or SL.
+
+# Input features:
+# 5-day log return, 14 day RSI, 20 day volatility, distance from 20 day MA.
+
+# Target feature:
+# Whether return will be positive after N days.
 
 import numpy as np
 import pandas as pd
@@ -436,3 +453,4 @@ axes[0,0].grid(True)
 
 plt.tight_layout()
 plt.show()
+
