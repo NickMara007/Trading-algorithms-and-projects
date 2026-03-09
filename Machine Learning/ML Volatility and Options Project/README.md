@@ -234,9 +234,17 @@ Not only did I really enjoy this project, but I learned a huge amount about the 
 
 Machine learning clearly has huge potential in this realm, but needs to be handled carefully. Perhaps its reliability as a standalone signal could be questioned, but I think that if used as a filter in conjunction with other tools it can be extremely powerful.
 
+
 ## **Technologies Used**
 
 **Python:** NumPy, Pandas, Scikit-learn, Matplotlib, yfinance, XGBoost, seaborn, scipy
 
 ## **Results and Graphs:**
 
+<img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/697b4ea3-3e62-4e19-b27a-2cb7dcc30984" />
+
+<img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/14186b0d-ac0b-44b7-b5f3-5750b6976dae" />
+
+<img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/7831dd23-1a67-4b91-ab8d-5e21fd7141f5" />
+
+<img width="1370" height="715" alt="Image" src="https://github.com/user-attachments/assets/0911df4f-241d-40fd-988c-1f8259f47c76" />
