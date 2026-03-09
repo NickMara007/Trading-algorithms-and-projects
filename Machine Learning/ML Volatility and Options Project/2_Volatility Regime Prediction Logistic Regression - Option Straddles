@@ -1,0 +1,544 @@
+
+
+
+# ==== Market Regime Modelling and Prediction using Machine Learning (Logistic Regression) ====
+# ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+
+# Objective: 
+# Predict future volatility market regimes using technical indicators and past 
+# volatility metrics, and evaluate on an option straddle strategy using predictors.  
+
+# Model:
+# Logistic regression using polynomial feature expansion.
+
+# Strategy:
+# Top percentile of predictions = high future volatility, enter long straddle.
+# Exit position at TP, SL, or timeout (avoid theta decay).
+
+# Input features:
+# 5-day volatility, 20-day volatility, volatility_ratio, ATR, ADX.
+
+# Target feature:
+# Future 20-day volatiliity.
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import yfinance as yf
+import matplotlib
+matplotlib.use('Qt5Agg')
+
+from sklearn.model_selection import train_test_split as tts
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error, f1_score, accuracy_score, precision_score, recall_score, roc_auc_score, fbeta_score, confusion_matrix, classification_report, average_precision_score
+import seaborn as sn
+from scipy.stats import norm
+
+# ==== Importing price data from yfinance ====
+
+ticker = 'AAPL'             #Input ticker symbol
+date_start = '2022-03-27'   #Input the start date in the form YYYY-MM-DD
+timeframe = '1D'            
+
+#asset = yf.download(ticker.upper(), period='2y', interval = timeframe.lower(), 
+#                    auto_adjust=True, threads=False )
+
+stock = yf.Ticker(ticker)
+asset = stock.history(period="5y", auto_adjust=True)
+
+# ==== Setting up input features ====
+
+#Moving average
+asset['20_MA'] = asset['Close'].rolling(window=20).mean().shift() 
+
+#Volatility
+asset['log_return_1d'] = np.log(asset['Close'] / asset['Close'].shift(1))
+
+asset['5_day_volatility'] = asset['log_return_1d'].rolling(5).std() 
+asset['20_day_volatility'] = asset['log_return_1d'].rolling(20).std() 
+asset['volatility_ratio'] = asset['5_day_volatility'] / asset['20_day_volatility']
+
+# ==== Defining Average True Range ====
+
+def get_ATR(df, period):
+    highs_array = df['High'].values
+    lows_array = df['Low'].values
+    close_array = df['Close'].values
+
+    TR_array = np.zeros(len(df))
+
+    for i in range(1,len(df)):
+        high = highs_array[i]
+        low = lows_array[i]
+        prev_close = close_array[i-1]
+
+        TR_array[i] = max( (high-low),(high-prev_close),(low-prev_close) )
+    
+    df["True Range"] = TR_array
+    df["ATR"] = df["True Range"].rolling(period).mean() #Normal ATR should not be shifted, i.e. ATR on row 14 uses data from rows 1-14.
+    df["ATR_feature"] = df["ATR"].shift(1) #However, when used as a predictor in ML, it should be shifted once to avoid look-ahead bias.
+
+    return df       
+
+df = get_ATR(asset, 14)
+
+# ==== Defining ADX ====
+
+def get_ADX(df,period):
+    highs_array = df['High'].values
+    lows_array = df['Low'].values
+    close_array = df['Close'].values
+
+    DM_plus = np.zeros(len(df))
+    DM_minus = np.zeros(len(df))
+    
+    TR_array = df['True Range']           #True range from ATR is period 1
+    TR_smoothed_array = np.zeros(len(df)) #Need to have a smoothed true range of period 14
+
+    # Calculating DM+ and DM- for entire data set (1 day period)
+    for i in range(1,len(df)):
+        up_move = highs_array[i]-highs_array[i-1]
+        down_move = lows_array[i-1]-lows_array[i]
+
+        if (up_move>down_move) and up_move>0:
+            DM_plus[i],DM_minus[i] = up_move, 0
+        elif (down_move>up_move) and down_move>0:
+            DM_plus[i], DM_minus[i] = 0, down_move
+
+    # Adding a smoothed version of DM+, DM- and TR (14 day period)
+    DM_plus_14_smoothed = np.zeros(len(df))
+    DM_minus_14_smoothed = np.zeros(len(df))
+    TR_smoothed_array = np.zeros(len(df)) 
+
+    DM_plus_14_smoothed[period] = np.sum(DM_plus[1:period+1])   # Calculating the first DM smoothed values with a simple sum then applying smoothing after
+    DM_minus_14_smoothed[period] = np.sum(DM_minus[1:period+1]) # This should be the 15th value which is the sum of DM values 2 to 15 (13 values before it then this is the 14th)
+    TR_smoothed_array[period] = np.sum(TR_array[1:period+1])    # Same for TR.
+
+    #Applying Wilder smoothing
+    for i in range(period+1,len(df)):
+        DM_plus_14_smoothed[i] = DM_plus_14_smoothed[i-1] - DM_plus_14_smoothed[i-1]/period + DM_plus[i]   
+        DM_minus_14_smoothed[i] = DM_minus_14_smoothed[i-1] - DM_minus_14_smoothed[i-1]/period + DM_minus[i]    
+        TR_smoothed_array[i] = TR_smoothed_array[i-1] - TR_smoothed_array[i-1]/period + TR_array[i]
+
+    #Calulating DI+ and DI-
+    DI_plus = 100 * (DM_plus_14_smoothed/TR_smoothed_array)
+    DI_minus = 100 * (DM_minus_14_smoothed/TR_smoothed_array)
+
+    #Calculating Directional Index (DX)
+    DX_array = 100 * abs(DI_plus - DI_minus) / (DI_plus + DI_minus)
+
+    #Calculating ADX
+    ADX_array = np.zeros(len(df))
+    ADX_array[2*period - 1] = np.sum(DX_array[period:2*period])/period
+    for i in range(2*period,len(df)):
+        ADX_array[i] = ADX_array[i-1] + (DX_array[i]-ADX_array[i-1])/period
+    
+    df['-DM'] = DM_minus
+    df['+DM'] = DM_plus
+    df['TR14'] = TR_smoothed_array
+    df['-DM14'] = DM_minus_14_smoothed
+    df['+DM14'] = DM_plus_14_smoothed
+    df['-DI14'] = DI_minus #DM_smoothed / TR_smoothed
+    df['+DI14'] = DI_plus
+    df['DX'] = DX_array
+    df['ADX'] = ADX_array
+
+    return(df)
+
+
+asset = get_ADX(asset, 14)
+
+#df = df.set_index(np.arange(0,len(df),1))
+#print(df.columns)
+#print(df.iloc[0:40,15:])
+
+#df_copy = df.drop(columns=["Volume","Dividends","Stock Splits","20_MA","log_return_1d"])
+
+#df_copy[0:80].to_csv("ML Regime Pred ADX Testing.csv")
+
+# ==== Creating Target Variable ====
+asset['future_20_day_vol'] = asset['log_return_1d'].rolling(20).std().shift(-20)
+
+asset = asset.iloc[70:] #Removing first 70 rows so that smoothing has had a chance to take effect, making training inputs more accurate.
+asset = asset.dropna()
+
+
+# ==== Splitting data into training, validation, and testing sets ====
+
+data_split = np.array([0.6, 0.2, 0.2]) 
+
+# Defines a function for splitting the dataset
+def split_dataframe(df, data_split):
+    training_end = int(len(df)*data_split[0])
+    val_end = int(training_end + len(df)*data_split[1])
+    print(training_end,val_end)
+    
+    training = df[:training_end]
+    validation = df[training_end:val_end]
+    test = df[val_end:]
+
+    return training, validation, test
+
+training, validation, test = split_dataframe(asset, data_split)
+
+
+# ==== Initialising Target Variable ====
+
+target_threshold = asset['future_20_day_vol'].quantile(0.7) #Using the 70th percentile of future vol from the training set to avoid data leakage as the target threshold
+
+training['Target'] = (training['future_20_day_vol'] > target_threshold).astype(int)  #Applying the target column using the threshold to each data split
+validation['Target'] = (validation['future_20_day_vol'] > target_threshold).astype(int)
+test['Target'] = (test['future_20_day_vol'] > target_threshold).astype(int)
+
+
+# ==== Defining input and target variables for the model ====
+
+def convert_to_numpy(df):
+    X = df[['5_day_volatility','20_day_volatility','volatility_ratio','ATR_feature','ADX']].to_numpy()
+    y = df['Target'].to_numpy()
+
+    return X,y
+
+X_train,y_train = convert_to_numpy(training)
+X_val,y_val = convert_to_numpy(validation)
+X_test,y_test = convert_to_numpy(test)
+
+# ==== Scaling Data ====
+
+scaler = StandardScaler().fit(X_train)
+
+X_train = scaler.transform(X_train)
+X_val = scaler.transform(X_val)
+X_test = scaler.transform(X_test)
+
+# ==== Defining Model ====
+
+def fit_model(X,y,order):
+    model = Pipeline([('poly', PolynomialFeatures(degree=order)),
+                      ('logistic', LogisticRegression(fit_intercept=False))]) #LogisticRegression(class_weight='balanced')
+    model.fit(X,y)
+
+    return model
+
+
+# ==== Fitting model and testing on Validation set ====
+
+models_dict = {}
+predictions_dict = {}
+val_metrics = {}
+upper_percentile = 70
+lower_percentile = 30
+
+for order in range(1,7):
+    models_dict[order] = fit_model(X_train, y_train, order)
+
+    predictions_dict[order] = models_dict[order].predict_proba(X_val)[:,1] #Gives probability of class 1
+
+    # Convert probabilities to class labels
+    y_val_prob = predictions_dict[order]
+    prob_threshold_high = np.percentile(y_val_prob, upper_percentile)
+    y_val_pred_class = (y_val_prob >= prob_threshold_high).astype(int) #Converts to 1 if p>=threshold, 0 if otherwise.
+
+        #Store metrics for each order in a dictionary
+    val_metrics[order] = {
+        "accuracy": accuracy_score(y_val, y_val_pred_class),
+        "roc_auc": roc_auc_score(y_val, y_val_prob),  # Use raw values or probabilities for ROC-AUC
+        "f1": f1_score(y_val, y_val_pred_class),
+        "cm": confusion_matrix(y_val, y_val_pred_class),
+        "precision": precision_score(y_val, y_val_pred_class),
+        "f_beta": fbeta_score(y_val, y_val_pred_class, beta=0.5),
+        "pr_auc": average_precision_score(y_val, y_val_prob)
+    }
+
+
+# ==== Printing performance metrics ===
+
+# Converting metric dictionary into lists
+orders = list(val_metrics.keys())
+
+accuracies = [val_metrics[o]["accuracy"] for o in orders]
+precision_scores = [val_metrics[o]["precision"] for o in orders]
+
+roc_aucs = [val_metrics[o]["roc_auc"] for o in orders]
+pr_aucs = [val_metrics[o]["pr_auc"] for o in orders]
+
+f1_scores = [val_metrics[o]["f1"] for o in orders]
+f_beta_scores = [val_metrics[o]["f_beta"] for o in orders]
+
+metrics_df = pd.DataFrame(val_metrics).T
+print(metrics_df)
+
+
+# ==== Selecting Model ====
+
+selection_metric = "roc_auc"
+possible_orders = [2,3,4,5]
+best_order = max(possible_orders, key=lambda o: val_metrics[o][selection_metric])
+best_model = models_dict[best_order]
+print(f"Selected polynomial degree: {best_order} (best {selection_metric})")
+
+cm = pd.DataFrame(val_metrics[best_order]["cm"])
+
+prob_threshold_high = np.percentile(predictions_dict[best_order], upper_percentile)
+
+# ==== Applying best model to test data ====
+
+y_test_prob = best_model.predict_proba(X_test)[:,1]
+
+prob_threshold_high_test = np.percentile(y_test_prob, upper_percentile) # Resetting probability threshold using test data distribution.
+prob_threshold_low_test = np.percentile(y_test_prob, lower_percentile)
+
+y_test_pred_class = (y_test_prob>=prob_threshold_high_test).astype(int)
+
+# ==== Test performance metrics ====
+
+precision_test = precision_score(y_test, y_test_pred_class)
+roc_auc_test = roc_auc_score(y_test, y_test_prob)
+f1_test = f1_score(y_test, y_test_pred_class)
+accuracy_test = accuracy_score(y_test, y_test_pred_class)
+cm_test = confusion_matrix(y_test, y_test_pred_class)
+
+test_metrics = {
+    "Precision": [precision_test],
+    "ROC-AUC": [roc_auc_test],
+    "Accuracy": [accuracy_test],
+    "cm": [cm_test]
+}
+test_metrics_df = pd.DataFrame(test_metrics)
+print(test_metrics_df)
+
+regime_array = np.zeros(len(y_test_prob))
+regime_array[y_test_prob >= prob_threshold_high_test] = 1
+regime_array[y_test_prob <= prob_threshold_low_test] = -1
+
+actual_regime = y_test.flatten()
+
+
+
+#                           ==== Trading Strategy ====
+
+
+def call_price(S, K, r, T, sigma):
+    if T <= 0:
+        return max(S - K, 0)
+    
+    d1 = (np.log(S/K) + (r+(sigma**2/2)*T)) / (sigma*np.sqrt(T))
+    d2 = d1 - sigma*np.sqrt(T)
+
+    C = S*norm.cdf(d1) - K*np.exp(-r*T)*norm.cdf(d2)
+
+    return C
+
+def put_price(S, K, r, T, sigma):
+    if T <= 0:
+        return max(K - S, 0)
+
+    d1 = (np.log(S/K) + (r+(sigma**2/2)*T)) / (sigma*np.sqrt(T))
+    d2 = d1 - sigma*np.sqrt(T)
+
+    P = -S*norm.cdf(-d1) + K*np.exp(-r*T)*norm.cdf(-d2)
+
+    return P
+
+
+def run_straddle_strategy(test, regime_pred, TP, SL, timeout):
+
+    prices = test['Close'].values
+    vol = test['20_day_volatility'].values * np.sqrt(252)
+    dates = test.index
+
+    num_trades = 0
+    num_wins = 0
+    trade_results = {}
+
+    r = 0.02
+    initial_capital = 10000
+    capital = initial_capital
+
+    equity_curve = []
+    strategy_gains = np.ones(len(test))
+    in_position = False
+
+    option_value = 0
+    K = 0
+    T_total = 30/252 # 30 day expiry
+    T_remaining = T_total
+    T_timeout = T_total - timeout/252
+
+    for i in range(1,len(test)):
+
+        regime = regime_pred[i]
+        price = prices[i]
+        vol_current = vol[i]
+        date = dates[i]
+
+        if regime==1 and in_position == False:
+
+            T_remaining = T_total
+            entry_date = date
+            entry_price = price
+            K = np.round(price*2)/2
+
+            call = call_price(price, K, r, T_remaining, vol_current)
+            put = put_price(price, K, r, T_remaining, vol_current)
+
+            option_value = call + put           
+
+            in_position = True
+
+        elif in_position:
+            T_remaining -= 1/252
+
+            call = call_price(price, K, r, T_remaining, vol_current)
+            put = put_price(price, K, r, T_remaining, vol_current)
+            
+            option_value_new = call + put
+            gain = 100*(option_value_new - option_value)/option_value
+            strategy_gains[i] = 1 + gain/100
+
+            if gain>=TP or gain<=-SL or T_remaining<=T_timeout or regime==0:
+                exit_date = date
+                exit_price = price
+
+                num_trades += 1
+                if gain>0: num_wins+=1
+
+                trade_results[num_trades] = {
+                    "Entry Date": entry_date,
+                    #"Exit Date": exit_date,
+                    "Stock Entry Price": entry_price,
+                    "Stock Exit Price": exit_price,
+                    "Strike": K,
+                    "Vol": vol_current,
+                    "Options Entry": option_value,
+                    "Options Exit": option_value_new,
+                    "Call":call,
+                    "Put":put,
+                    "Gain %": gain
+                }
+
+                in_position = False
+
+    equity_curve = (np.cumprod(strategy_gains) - 1)*100
+    
+    final_gain = equity_curve[-1]
+    win_rate = np.round(100*num_wins/num_trades,2)
+
+    strategy_metrics = {
+        "Number of Trades": num_trades,
+        "Win Rate %": win_rate,
+        "Total Gain": final_gain
+    }            
+
+    return equity_curve, trade_results, strategy_metrics
+
+
+equity_curve, trade_results, strategy_metrics = run_straddle_strategy(test, y_test_pred_class, 30, 8, 15)
+trade_results_df = pd.DataFrame(trade_results).T
+print(trade_results_df)
+
+
+# ==== Plotting Graphs ====
+
+# Prediction interpretation plots
+
+dates = test.index
+price = test['Close'].values
+regime = y_test_pred_class.flatten()
+
+fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+
+axes[0,0].plot(dates,price, label=f"{ticker} price")
+axes[0,0].fill_between(dates,
+                    price.min(),price.max(),
+                    where=(regime_array==1),
+                    color='red', alpha=0.2, label='High volatility')
+axes[0,0].fill_between(dates,
+                    price.min(),price.max(),
+                    where=(regime_array==0),
+                    color='blue', alpha=0.2, label='Medium volatility')
+axes[0,0].fill_between(dates,
+                    price.min(),price.max(),
+                    where=(regime_array==-1),
+                    color='green', alpha=0.2, label='Low volatility')
+
+axes[0,0].set_title(f"Predicted market regimes over time for {ticker}")
+axes[0,0].legend(loc='upper left')
+
+axes[1,0].plot(dates, regime_array, label="Regime Arrays over Time")
+
+axes[0,1].plot(dates, price)
+axes[0,1].fill_between(dates,
+                      price,price.max(),
+                      where=(actual_regime==1),
+                      color='blue',
+                      label='Actual High Vol',
+                      alpha=0.2)
+axes[0,1].fill_between(dates,
+                      price,price.min(),
+                      where=(regime_array==1),
+                      color='red',
+                      label='Predicted High Vol',
+                      alpha=0.2)
+axes[0,1].legend(loc='upper left')
+
+high_vol_probs = y_test_prob[y_test == 1]
+low_vol_probs  = y_test_prob[y_test == 0]
+
+axes[1,1].hist(low_vol_probs, bins=30, alpha=0.5, label="Actual Low Vol")
+axes[1,1].hist(high_vol_probs, bins=30, alpha=0.5, label="Actual High Vol")
+axes[1,1].set_xlabel("Predicted Probability")
+axes[1,1].set_ylabel("Frequency")
+axes[1,1].legend()
+axes[1,1].set_title("Probability Separation by Actual Regime")
+
+
+# ==== Trading Strategy Graphs ====
+
+fig, axes = plt.subplots(2, 1, figsize=(9, 7))
+
+#Strategy Returns
+axes[0].plot(dates, equity_curve, label="ML Strategy Equity Curve")
+axes[0].set_title(f"ML Strategy {ticker}")
+axes[0].grid(True)
+axes[0].legend()
+
+plt.show()
+
+# ==== ML Model Plots ====
+
+fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+
+#Validation Confusion Matrix
+sn.heatmap(cm, annot=True, fmt="d", ax=axes[1,0])
+axes[1,0].set_title(f"Confusion Matrix for order {best_order} on validation set")
+axes[1,0].set_ylabel("Actual Value")
+axes[1,0].set_xlabel("Predicted Value")
+
+#Test Confusion Matrix
+sn.heatmap(cm_test, annot=True, fmt="d", ax=axes[1,1])
+axes[1,1].set_title(f"Confusion Matrix for test set")
+axes[1,1].set_ylabel("Actual Value")
+axes[1,1].set_xlabel("Predicted Value")
+
+#Probability Histogram
+axes[0,1].hist(y_val_prob, bins=30)
+axes[0,1].set_title("Prediction Probability Distribution for Validation Set")
+axes[0,1].axvline(prob_threshold_high, color='red', linestyle='--', linewidth=1, label="Upper Probability Threshold")
+#axes[0,1].axvline(prob_threshold_low, color='blue', linestyle='--', linewidth=1, label="Lower Probability Threshold")
+axes[0,1].legend()
+
+#Model performance metrics
+axes[0,0].plot(orders, precision_scores, label="Precision",  marker='o')
+axes[0,0].plot(orders, roc_aucs, label="ROC-AUC",  marker='o')
+axes[0,0].plot(orders, accuracies, label="Accuracy",  marker='o')
+axes[0,0].plot(orders, f_beta_scores, label="F-Beta",  marker='o')
+axes[0,0].set_title("Model Metrics vs Polynomial Degree")
+axes[0,0].legend(["Precision", "ROC-AUC", "Accuracy", "F-Beta"])
+axes[0,0].grid(True)
+
+plt.tight_layout()
+
+plt.show()
