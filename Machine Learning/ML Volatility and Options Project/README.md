@@ -43,11 +43,8 @@ Target = 0 otherwise
 Technical indicators commonly used in systematic trading:
 
 - Relative Strength Index (RSI)
-
 - Rolling volatility
-
 - Rolling log returns
-
 - Price distance from moving averages
 
 ### **Model:**
@@ -89,11 +86,8 @@ Using an expanding threshold ensures that the definition of "high volatility" ad
 ### **Features:**
 
 - Average True Range (ATR)
-
 - Average Directional Index (ADX)
-
 - Rolling realized volatility
-
 - Volatility ratios
 
 ### **Strategy:**
@@ -230,13 +224,10 @@ I believe that machine learning can be an extremely useful tool for quantitative
 
 Potential extensions to the project include:
 
-Incorporating implied volatility data from real options markets.
-
-Implementing delta-hedged straddle strategies.
-
-Improving transaction cost modelling.
-
-Expanding the dataset across multiple assets and regimes.
+- Incorporating implied volatility data from real options markets.
+- Implementing delta-hedged straddle strategies.
+- Improving transaction cost modelling.
+- Expanding the dataset across multiple assets and regimes.
 
 ## **Technologies Used**
 
