@@ -11,7 +11,7 @@ The goal is to investigate whether machine learning can identify conditions unde
 
 The project is organized into four scripts, each representing a stage in the research process.
 
-- 1_direction_prediction_logistic.py
+- 1_Price Direction Prediction Logistic Regression - Long & Short.py
 - 2_Volatility Regime Prediction Logistic Regression - Option Straddles.py
 - 3_volatility_prediction_decision_tree.py
 - 4_future_move_prediction_straddle.py
