@@ -216,10 +216,6 @@ Several insights emerged during development:
 - Options strategies benefit from predicting large moves rather than direction.
 - Volatility compression features are often strong predictors of future expansion.
 
-**Overall conclusion:**
-
-I believe that machine learning can be an extremely useful tool for quantitative and systematic trading strategy development. There is clearly a lot of potential in harnessing predictive power, however it requires careful tuning and attention to detail when working with large data sets. Since I was only able to import five years worth of daily price data, the validation and test sets ended up only having a few hundred data points. I think with more available market data and a larger data set(potentially looking at hourly data over a similar period), the ability to more reliably train and test these ML models increases massively.
-
 ## **Future Improvements**
 
 Potential extensions to the project include:
@@ -227,16 +223,18 @@ Potential extensions to the project include:
 - Incorporating implied volatility data from real options markets.
 - Implementing delta-hedged straddle strategies.
 - Improving transaction cost modelling.
-- Expanding the dataset across multiple assets and regimes.
+- Expanding the dataset across multiple assets classes.
+- Implementing hyperparamter optimisation (such as grid search).
+
+## **Overall conclusion:**
+
+I believe that machine learning can be an extremely useful tool for quantitative and systematic trading strategy development. There is clearly a lot of potential in harnessing predictive power, however it requires careful tuning and attention to detail when working with large data sets. Since I was only able to import five years worth of daily price data, the validation and test sets ended up only having a few hundred data points. I think with more available market data and therefore a larger data set(potentially looking at hourly data over a similar period), the ability to more reliably train and test these ML models increases massively.
+
+Machine learning clearly has huge potential in this realm, but needs to be handled carefully. Perhaps its reliability as a standalone signal could be questioned, but I think that if used as a filter in conjunction with other tools it can be extremely powerful.
 
 ## **Technologies Used**
 
-**Python**
-- NumPy
-- Pandas
-- Scikit-learn
-- Matplotlib
-- yfinance
-- XGBoost
-- seaborn
-- scipy
+**Python:** NumPy, Pandas, Scikit-learn, Matplotlib, yfinance, XGBoost, seaborn, scipy
+
+## **Results and Graphs:**
+
