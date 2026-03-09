@@ -230,6 +230,8 @@ Potential extensions to the project include:
 
 I believe that machine learning can be an extremely useful tool for quantitative and systematic trading strategy development. There is clearly a lot of potential in harnessing predictive power, however it requires careful tuning and attention to detail when working with large data sets. Since I was only able to import five years worth of daily price data, the validation and test sets ended up only having a few hundred data points. I think with more available market data and therefore a larger data set(potentially looking at hourly data over a similar period), the ability to more reliably train and test these ML models increases massively.
 
+Not only did I really enjoy this project, but I learned a huge amount about the practical implementation of machine learning, option trading strategies, and proper data management and processing.
+
 Machine learning clearly has huge potential in this realm, but needs to be handled carefully. Perhaps its reliability as a standalone signal could be questioned, but I think that if used as a filter in conjunction with other tools it can be extremely powerful.
 
 ## **Technologies Used**
