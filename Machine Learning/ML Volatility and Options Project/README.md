@@ -35,7 +35,7 @@ Predict whether the asset price will increase over a specified future horizon.
 
 Binary classification:
 
-Target = 1 if future return > 0
+Target = 1 if future return > 0\
 Target = 0 otherwise
 
 ### **Features:**
@@ -66,7 +66,7 @@ This stage served primarily as an initial baseline for model evaluation and pipe
 **Script:** 
 2_Volatility Regime Prediction Logistic Regression - Option Straddles.py
 
-The second stage shifts the focus from direction prediction to volatility prediction, with the intention of implementing option straddle strategies that profit from voaltility.
+The second stage shifts the focus from direction prediction to volatility prediction, with the intention of implementing option straddle strategies that profit from volatility.
 
 This change was motivated by the observation that directional prediction is often difficult in financial markets, whereas predicting volatility regimes can be more tractable, and can also an extremely useful tool generally, not just for directly generating trading signals.
 
